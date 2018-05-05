@@ -1,0 +1,57 @@
+default:
+
+all: init build run
+
+build:
+	dotnet build --configuration Release
+
+new:
+	dotnet new console
+
+init:
+	dotnet restore
+
+run:
+	dotnet run
+
+publish:
+	dotnet publish --output arc
+
+clear:
+	rm -rf arc/*
+
+clean:
+	rm -rf arc
+	rm -rf obj
+	rm -rf bin
+
+package:
+#	dotnet lambda package --configuration Release --framework netcoreapp1.0
+	(cd arc && zip ../publish.zip *)
+
+# Lambdaで新しいAWSの名前空間を使いたい時
+# namespace呼び出しでエラーになったら、依存パッケージが入ってない。多分ね。
+#
+# nuget（https://www.nuget.org/packages?q=AWSSDK）からAWSSDK.***（大抵、usingの第２セパレータ以降の文字列）で調べて、
+# 
+# dotnet add package AWSSDK.SimpleEmail
+#
+# とかやる。
+add-library:
+	dotnet add package ${PKG}
+
+lambda: publish package
+
+deploy: aws-lambda-tools-defaults.json
+	dotnet lambda deploy-function
+
+ROLE_ARN  ?= $(shell aws iam list-roles | jq '.[]' | jq 'map(select(.RoleName | startswith("Lambda")))' | jq '.[0].Arn')
+FUNC_NAME ?= $(shell basename `pwd`)
+
+aws-lambda-tools-defaults.json:
+	@php ${BASEPATH}CreateLambdaToolsDefaults.php ${FUNC_NAME} ${ROLE_ARN}
+
+test:
+	@echo ${FUNC_NAME}
+	@echo ${ROLE_ARN}
+#	@php ${BASEPATH}CreateLambdaToolsDefaults.php ${FUNC_NAME} ${ROLE_ARN}

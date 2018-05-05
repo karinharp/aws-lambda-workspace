@@ -1,0 +1,2 @@
+BASEPATH = "../"
+include ../Makefile.in
